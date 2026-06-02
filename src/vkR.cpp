@@ -38,6 +38,9 @@
         }                                                                   \
     } while (0)
 
+#define LOG(content)	\
+	std::cout << "[vkR LOG] " << content << std::endl; 
+
 bool ValidateExtensions(const std::vector<const char*> &required, const std::vector<VkExtensionProperties> &available)
 {
 	for (auto extension : required)
@@ -60,7 +63,43 @@ bool ValidateExtensions(const std::vector<const char*> &required, const std::vec
 
 VkInstance CreateInstance()
 {
-	VkInstanceCreateInfo instanceCreateInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+	LOG("Initializing Vulkan Instance");
+
+	VK_CHECK(volkInitialize());
+
+// Extensions
+	uint32_t availableInstanceExtensionCount = 0;
+	VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &availableInstanceExtensionCount, nullptr));
+	
+	std::vector<VkExtensionProperties> availableInstanceExtensions(availableInstanceExtensionCount);
+	VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &availableInstanceExtensionCount, availableInstanceExtensions.data()));
+
+	std::vector<const char*> requiredInstanceExtensions{ VK_KHR_SURFACE_EXTENSION_NAME };
+#ifdef _DEBUG
+	requiredInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+	requiredInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif
+	if (!ValidateExtensions(requiredInstanceExtensions, availableInstanceExtensions))
+	{
+		throw std::runtime_error("Required instance extensions are missing.");
+	}
+	
+
+// Layers
+	std::vector<const char*> requiredInstanceLayers;
+
+#if _DEBUG
+	
+	const char* debugLayerName[] = { "VK_LAYER_KHRONOS_validation" };
+
+	for (auto layer : debugLayerName)
+	{
+		requiredInstanceLayers.push_back(layer);
+	}
+	// TODO: check if support validation layer
+#endif		
 
 	VkApplicationInfo appInfo{
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -71,23 +110,20 @@ VkInstance CreateInstance()
 		.engineVersion = VK_MAKE_VERSION(0, 1, 0),
 		.apiVersion = VK_API_VERSION_1_4,
 	};
-	instanceCreateInfo.pApplicationInfo = &appInfo;
 
-	uint32_t extensionCount;
-	SDL_Vulkan_GetInstanceExtensions(&extensionCount);
-	const char* const* extensions{ SDL_Vulkan_GetInstanceExtensions(&extensionCount) };
-	instanceCreateInfo.enabledExtensionCount = extensionCount;
-	instanceCreateInfo.ppEnabledExtensionNames = extensions;
-
-#if _DEBUG
-	// Enable Validation Layer in Debug mode
-	const char* debugLayerName[] = { "VK_LAYER_KHRONOS_validation" };
-	instanceCreateInfo.enabledLayerCount = sizeof(debugLayerName) / sizeof(debugLayerName[0]);
-	instanceCreateInfo.ppEnabledLayerNames = debugLayerName;
-#endif		
+	VkInstanceCreateInfo instanceCI{
+		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pApplicationInfo = &appInfo,
+		.enabledLayerCount = static_cast<uint32_t>(requiredInstanceLayers.size()),
+		.ppEnabledLayerNames = requiredInstanceLayers.data(),
+		.enabledExtensionCount = static_cast<uint32_t>(requiredInstanceExtensions.size()),
+		.ppEnabledExtensionNames = requiredInstanceExtensions.data()
+	};
 
 	VkInstance instance;
-	VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &instance));
+	VK_CHECK(vkCreateInstance(&instanceCI, nullptr, &instance));
 	return instance;
 }
 
@@ -177,7 +213,6 @@ int main()
 
 	CHECK(SDL_Init(SDL_INIT_VIDEO));
 	CHECK(SDL_Vulkan_LoadLibrary(NULL));
-	VK_CHECK(volkInitialize());
 
 	SDL_Window* window = SDL_CreateWindow("vkR", 1280u, 720u, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 	assert(window);
