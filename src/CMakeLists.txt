@@ -1,0 +1,39 @@
+add_executable(vkR
+    main.cpp
+    vk_types.h
+    vk_initializers.cpp
+    vk_initializers.h
+    vk_images.h
+    vk_images.cpp 
+    vk_descriptors.h
+    vk_descriptors.cpp
+    vk_pipelines.h
+    vk_pipelines.cpp
+    vk_engine.h
+    vk_engine.cpp
+    vk_loader.h
+    vk_loader.cpp
+    camera.cpp
+    camera.h
+)
+
+target_include_directories(
+    vkR
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(
+    vkR
+    PRIVATE
+        Vulkan::Vulkan
+        fmt::fmt
+        vk-bootstrap
+        imgui
+        tinygltf
+)
+
+add_dependencies(
+    vkR
+    Shaders
+)
