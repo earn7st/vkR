@@ -6,59 +6,20 @@
 #include "vkR_types.h"
 #include "vkR_descriptors.h"
 
-struct DeletionQueue
-{
-	std::deque<std::function<void()>> deletors;
-
-	void push_function(std::function<void()>&& function) {
-		deletors.push_back(function);
-	}
-
-	void flush() {
-		// reverse iterate the deletion queue to execute all the functions
-		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-			(*it)(); //call functors
-		}
-
-		deletors.clear();
-	}
-};
-
-struct AllocatedImage {
-	VkImage image;
-	VkImageView imageView;
-	VmaAllocation allocation;
-	VkExtent3D imageExtent;
-	VkFormat imageFormat;
-};
+struct MeshAsset;
 
 struct FrameData {
-// Command
+	// Command
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-// Synchronization
+	// Synchronization
 	VkSemaphore _swapchainSemaphore, _renderSemaphore;
 	VkFence _renderFence;
 
 	DeletionQueue _deletionQueue;
+	DescriptorAllocatorGrowable _frameDescriptors;
 };
 constexpr unsigned int FRAME_OVERLAP = 2;
-
-struct ComputePushConstants {
-	glm::vec4 data1;
-	glm::vec4 data2;
-	glm::vec4 data3;
-	glm::vec4 data4;
-};
-
-struct ComputeEffect {
-	const char* name;
-
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
-
-	ComputePushConstants data;
-};
 
 class VulkanEngine {
 public:
@@ -67,9 +28,10 @@ public:
 	bool _isInitialized{ false };
 	int _frameNumber {0};
 	bool stop_rendering{ false };
-	VkExtent2D _windowExtent{ 1440 , 1080 };
+	VkExtent2D _windowExtent{ 1920 , 1080 };
 
 	struct SDL_Window* _window{ nullptr };
+	bool resize_requested = false;
 
 // Vulkan Objects
 	VkInstance _instance;
@@ -102,6 +64,10 @@ public:
 // Draw Image
 	AllocatedImage _drawImage;
 	VkExtent2D _drawExtent;
+	float renderScale = 1.f;
+
+// Depth Image
+	AllocatedImage _depthImage;
 
 // Descriptors
 	DescriptorAllocator globalDescriptorAllocator;
@@ -110,11 +76,16 @@ public:
 	VkDescriptorSetLayout _drawImageDescriptorLayout;
 
 // Pipelines
-	VkPipeline _gradientPipeline;
 	VkPipelineLayout _gradientPipelineLayout;
 
-	VkPipeline _trianglePipeline;
-	VkPipelineLayout _trianglePipelineLayout;
+	VkPipelineLayout _meshPipelineLayout;
+	VkPipeline _meshPipeline;
+
+// Buffers
+	GPUMeshBuffers rectangle;
+
+// Meshes
+	std::vector<std::shared_ptr<MeshAsset>> testMeshes;
 
 // Immediate Submits
 	VkFence _immFence;
@@ -124,6 +95,21 @@ public:
 // ComputeEffets: [PipelineLayout, Pipeline, ComputePushConstants]
 	std::vector<ComputeEffect> backgroundEffects;
 	int currentBackgroundEffect{ 0 };
+
+// Scene Data using Uniform Buffer
+	GPUSceneData sceneData;
+	VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
+
+// Images for Textures
+	AllocatedImage _whiteImage;
+	AllocatedImage _blackImage;
+	AllocatedImage _greyImage;
+	AllocatedImage _errorCheckerboardImage;
+
+	VkSampler _defaultSamplerLinear;
+	VkSampler _defaultSamplerNearest;
+
+	VkDescriptorSetLayout _singleImageDescriptorLayout;
 
 
 public:
@@ -139,20 +125,27 @@ private:
 	void init_vulkan();
 	
 	void init_commands_vkb();
-	void init_commands();
 	void init_sync_structures();
 
+	void init_images();
 	void init_descriptors();
 
 	void init_pipelines();
 	void init_background_pipelines();
 	void init_triangle_pipeline();
+	void init_mesh_pipeline();
+
+	void init_default_data();
 	
 	void init_imgui();
 	void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
+;
+	void init_swapchain_vkb(uint32_t width, uint32_t height);
+	void resize_swapchain();
 
-	void create_swapchain();
-	void create_swapchain_vkb(uint32_t width, uint32_t height);
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+	void destroy_buffer(const AllocatedBuffer& buffer);
+	void destroy_mesh_asset(std::shared_ptr<MeshAsset>& meshAsset);
 
 	void draw_background(VkCommandBuffer cmd);
 	void draw_geometry(VkCommandBuffer cmd);
@@ -161,5 +154,12 @@ private:
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
+	AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+	AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+	void destroy_image(const AllocatedImage& img);
+
+public:
+	GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 	
 };
+

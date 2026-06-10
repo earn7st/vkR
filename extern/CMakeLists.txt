@@ -9,16 +9,9 @@ add_subdirectory(fmt)
 add_subdirectory(vk-bootstrap)
 
 #
-# tinygltf
+# fastgltf
 #
-set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF)
-add_library(tinygltf INTERFACE)
-
-target_include_directories(
-    tinygltf
-    INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/tinygltf
-)
+add_subdirectory(fastgltf)
 
 #
 # Dear ImGui
@@ -48,3 +41,14 @@ target_link_libraries(
         SDL3::SDL3
         Vulkan::Vulkan
 )
+
+#
+# stb_image
+#
+add_library(stb INTERFACE)
+
+target_include_directories(stb
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+

@@ -21,6 +21,7 @@ target_include_directories(
     vkR
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/extern
 )
 
 target_link_libraries(
@@ -30,7 +31,13 @@ target_link_libraries(
         fmt::fmt
         vk-bootstrap
         imgui
-        tinygltf
+        fastgltf::fastgltf
+)
+
+target_compile_definitions(vkR
+    PRIVATE
+        GLM_ENABLE_EXPERIMENTAL
+        GLM_FORCE_DEPTH_ZERO_TO_ONE
 )
 
 add_dependencies(
