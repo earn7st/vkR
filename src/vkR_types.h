@@ -128,32 +128,39 @@ struct MaterialInstance {
 	MaterialPass passType;
 };
 
-struct GLTFMetallic_Roughness {
-	MaterialPipeline opaquePipeline;
-	MaterialPipeline transparentPipeline;
+struct DrawContext;
 
-	VkDescriptorSetLayout materialLayout;
+// base class for a renderable dynamic object
+class IRenderable {
 
-	struct MaterialConstants {
-		glm::vec4 colorFactors;
-		glm::vec4 metal_rough_factors;
-		//padding, we need it anyway for uniform buffers
-		glm::vec4 extra[14];
-	};
+	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx) = 0;
+};
 
-	struct MaterialResources {
-		AllocatedImage colorImage;
-		VkSampler colorSampler;
-		AllocatedImage metalRoughImage;
-		VkSampler metalRoughSampler;
-		VkBuffer dataBuffer;
-		uint32_t dataBufferOffset;
-	};
+// implementation of a drawable scene node.
+// the scene node can hold children and will also keep a transform to propagate
+// to them
+struct Node : public IRenderable {
 
-	DescriptorWriter writer;
+	// parent pointer must be a weak pointer to avoid circular dependencies
+	std::weak_ptr<Node> parent;
+	std::vector<std::shared_ptr<Node>> children;
 
-	void build_pipelines(VulkanEngine* engine);
-	void clear_resources(VkDevice device);
+	glm::mat4 localTransform;
+	glm::mat4 worldTransform;
 
-	MaterialInstance write_material(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator);
+	void refreshTransform(const glm::mat4& parentMatrix)
+	{
+		worldTransform = parentMatrix * localTransform;
+		for (auto c : children) {
+			c->refreshTransform(worldTransform);
+		}
+	}
+
+	virtual void Draw(const glm::mat4& topMatrix, DrawContext& ctx)
+	{
+		// draw children
+		for (auto& c : children) {
+			c->Draw(topMatrix, ctx);
+		}
+	}
 };
