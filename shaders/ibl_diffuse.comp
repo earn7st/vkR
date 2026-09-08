@@ -1,0 +1,47 @@
+ #version 460
+  #define PI 3.14159265359
+
+  layout(set = 0, binding = 0) uniform sampler2D envMap;            // equirectangular HDR
+  layout(set = 0, binding = 1, rgba16f) uniform image2D OUT_COLOR;
+
+  layout(push_constant) uniform IBLSetting {
+      vec4 front; 
+      vec4 up;
+      float deltaPhi; 
+      float deltaTheta;
+      float roughness; 
+      uint numSamples; 
+      uint mip;
+  } SETTING;
+
+  layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+  vec2 DirToEquirectUV(vec3 d) 
+  {
+      float phi = atan(d.z, d.x), theta = acos(clamp(d.y, -1.0, 1.0));
+      return vec2(phi * (0.5 / PI) + 0.5, theta / PI);
+  }
+
+  void main() 
+  {
+      ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+      vec2 uv     = (vec2(pixel) + 0.5) / 32.0;    // DIFFUSE_IBL_SIZE
+      vec2 dir2d  = uv * 2.0 - 1.0;
+
+      vec3 right = cross(SETTING.front.xyz, SETTING.up.xyz);
+      vec3 N = normalize(SETTING.front.xyz + dir2d.x * normalize(right) + dir2d.y * normalize(SETTING.up.xyz));
+
+      vec3 up = vec3(0.0, 1.0, 0.0);
+      right   = normalize(cross(up, N));
+      up      = cross(N, right);
+
+      vec3 color = vec3(0.0); uint cnt = 0u;
+      for (float phi = 0.0; phi < PI * 2.0; phi += SETTING.deltaPhi)
+      for (float theta = 0.0; theta < PI * 0.5; theta += SETTING.deltaTheta) {
+          vec3 tmp  = cos(phi) * right + sin(phi) * up;
+          vec3 svec = cos(theta) * N + sin(theta) * tmp;
+          color += textureLod(envMap, DirToEquirectUV(svec), 0.0).rgb * cos(theta) * sin(theta);
+          cnt++;
+      }
+      imageStore(OUT_COLOR, pixel, vec4(PI * color / float(cnt), 1.0));
+  }

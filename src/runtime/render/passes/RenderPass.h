@@ -7,13 +7,15 @@ namespace shzk
 {
 	enum class PassType : uint32_t
 	{
-		DepthPre				= 0,
-		Forward					= 1,
-		Sky						= 2,
-		DirectionalShadowMap	= 3,
-		PointLightShadowMap		= 4,
+		IBL						= 0,
+	
+		DepthPre				= 1,
+		Forward					= 2,
+		Sky						= 3,
+		DirectionalShadowMap	= 4,
+		PointLightShadowMap		= 5,
 
-		PostProcess				= 5,
+		PostProcess				= 6,
 
 		Max,
 	};

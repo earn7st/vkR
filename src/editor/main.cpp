@@ -15,31 +15,40 @@
 #include "runtime/framework/components/CameraComponent.h"	
 #include "runtime/framework/components/TransformComponent.h"	
 #include "runtime/framework/components/SkyBoxComponent.h"
+#include "runtime/framework/components/SkyLightComponent.h"
 //import
 #include "runtime/import/GltfLoader.h"
 
 void InitScene(std::shared_ptr<shzk::Scene>& scene)
 {
-	// SkyBox
+
 	if (true)
 	{
-		std::shared_ptr<shzk::Node> skybox = std::make_shared<shzk::Node>(0, "skybox_industrial");
+		// SkyBox
+		std::shared_ptr<shzk::Node> skybox = std::make_shared<shzk::Node>(0, "skybox_climbing_gym");
 		std::shared_ptr<shzk::TransformComponent> transformComp = std::make_shared<shzk::TransformComponent>();
 		skybox->AddComponent(transformComp);
 		std::shared_ptr<shzk::SkyBoxComponent> skyboxComp = std::make_shared<shzk::SkyBoxComponent>();
 		skybox->AddComponent(skyboxComp);
 
 		std::vector<std::string> restingPlacePaths = {
-			SHZK_ASSETS_DIR "_environment/climbing_gym/CubeMap_4K/px.png",
-			SHZK_ASSETS_DIR "_environment/climbing_gym/CubeMap_4K/nx.png",
-			SHZK_ASSETS_DIR "_environment/climbing_gym/CubeMap_4K/py.png",
-			SHZK_ASSETS_DIR "_environment/climbing_gym/CubeMap_4K/ny.png",
-			SHZK_ASSETS_DIR "_environment/climbing_gym/CubeMap_4K/pz.png",
-			SHZK_ASSETS_DIR "_environment/climbing_gym/CubeMap_4K/nz.png" };
+			SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/CubeMap_4K/px.png",
+			SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/CubeMap_4K/nx.png",
+			SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/CubeMap_4K/py.png",
+			SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/CubeMap_4K/ny.png",
+			SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/CubeMap_4K/pz.png",
+			SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/CubeMap_4K/nz.png" };
 		std::shared_ptr<shzk::Texture> restingPlaceCubeMap = std::make_shared<shzk::Texture>(restingPlacePaths, shzk::TextureType::TypeCube, shzk::RHIFormat::FORMAT_R8G8B8A8_SRGB);
 
 		std::shared_ptr<shzk::Material> skyboxMaterial = skyboxComp->GetMaterial();
 		skyboxMaterial->SetTextureCubeSlot(0, restingPlaceCubeMap);
+		
+		// Environment Map for SkyLight
+		std::shared_ptr<shzk::SkyLightComponent> skyLight = std::make_shared<shzk::SkyLightComponent>();
+
+		std::shared_ptr<shzk::Texture> skyLightHDR = std::make_shared<shzk::Texture>(SHZK_ASSETS_DIR "_builtin/environment/climbing_gym/climbing_gym_4k.hdr", shzk::TextureType::TypeEquirectangular, shzk::RHIFormat::FORMAT_R16G16B16A16_SFLOAT);
+		skyLight->SetEnvironmentMap(skyLightHDR);
+		skybox->AddComponent(skyLight);
 
 		scene->AddNode(skybox);
 	}
@@ -101,7 +110,7 @@ void InitScene(std::shared_ptr<shzk::Scene>& scene)
 
 		scene->AddNode(sponza);
 	}
-	
+
 }
 
 int main()

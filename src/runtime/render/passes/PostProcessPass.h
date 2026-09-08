@@ -36,9 +36,7 @@ namespace shzk
 
 		std::shared_ptr<Shader> m_shader;
 		std::shared_ptr<RHIRootSignature> m_rootSignature;
-		
 		std::array<std::shared_ptr<RHIDescriptorSet>, FRAMES_IN_FLIGHT> m_descriptorSets;
-
 		std::shared_ptr<RHIComputePipeline> m_pipeline;
 	};
 }

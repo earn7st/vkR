@@ -54,8 +54,7 @@ namespace shzk
 	}
 
 	void PostProcessPass::Prepare()
-	{	
-	}
+	{}
 
 	void PostProcessPass::Execute(std::shared_ptr<RHICommandList> cmd)
 	{

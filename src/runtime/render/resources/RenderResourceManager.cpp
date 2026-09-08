@@ -169,6 +169,41 @@ namespace shzk
                 SamplerMipmapMode::Linear,
                 SamplerAddressMode::Repeat,
                 0.f));
+
+            // IBL
+            {
+                const uint32_t IRR_SIZE = 32, SPEC_SIZE = 128, SPEC_MIPS = 5;
+
+                RHITextureInfo irr{};
+                irr.format = FORMAT_R16G16B16A16_SFLOAT;
+                irr.extent = { IRR_SIZE, IRR_SIZE, 1 };
+                irr.arrayLayers = 6;
+                irr.mipLevels = 1;
+                irr.memoryUsage = MemoryUsage::GPUOnly;
+                irr.type = RESOURCE_TYPE_TEXTURE | RESOURCE_TYPE_TEXTURE_CUBE | RESOURCE_TYPE_RW_TEXTURE;
+                m_iblDiffuse = RHI::Get()->CreateTexture(irr);
+
+                RHITextureViewInfo irrV{};
+                irrV.texture = m_iblDiffuse; irrV.format = irr.format;
+                irrV.viewType = TextureViewType::ViewCube;
+                irrV.subresourceRange = { TEXTURE_ASPECT_COLOR, 0, 1, 0, 6 };
+                m_iblDiffuseView = RHI::Get()->CreateTextureView(irrV);
+
+                RHITextureInfo spec{};
+                spec.format = FORMAT_R16G16B16A16_SFLOAT;
+                spec.extent = { SPEC_SIZE, SPEC_SIZE, 1 };
+                spec.arrayLayers = 6;
+                spec.mipLevels = SPEC_MIPS;
+                spec.memoryUsage = MemoryUsage::GPUOnly;
+                spec.type = RESOURCE_TYPE_TEXTURE | RESOURCE_TYPE_TEXTURE_CUBE | RESOURCE_TYPE_RW_TEXTURE;
+                m_iblSpecular = RHI::Get()->CreateTexture(spec);
+
+                RHITextureViewInfo specV{};
+                specV.texture = m_iblSpecular; specV.format = spec.format;
+                specV.viewType = TextureViewType::ViewCube;
+                specV.subresourceRange = { TEXTURE_ASPECT_COLOR, 0, SPEC_MIPS, 0, 6 };
+                m_iblSpecularView = RHI::Get()->CreateTextureView(specV);
+            }
         }
         
     }

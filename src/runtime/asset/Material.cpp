@@ -74,7 +74,7 @@ namespace shzk
 
 	void Material::UpdateTexture(uint32_t binding, std::shared_ptr<Texture> texture)
 	{
-		if (!texture || !texture->m_textureView || !m_descriptorSet) 
+		if (!texture || !texture->GetRHITextureView() || !m_descriptorSet) 
 		{
 			SHZK_LOG_WARN("Material::UpdateTexture failed, resources not adequate!");
 			return;
@@ -84,7 +84,7 @@ namespace shzk
 		info.binding		= binding;
 		info.index			= 0;
 		info.resourceType	= RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
-		info.textureView	= texture->m_textureView;
+		info.textureView	= texture->GetRHITextureView();
 		info.sampler		= RenderResourceManager::Get()->GetDefaultSampler()->GetRHISampler();
 		m_descriptorSet->UpdateDescriptor(info);
 	}

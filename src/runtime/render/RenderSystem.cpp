@@ -14,6 +14,7 @@
 #include "runtime/render/passes/ForwardPass.h"
 #include "runtime/render/passes/SkyPass.h"
 #include "runtime/render/passes/PostProcessPass.h"
+#include "runtime/render/passes/IBLPass.h"
 #include "RenderConfig.h"
 #include <cassert>
 
@@ -147,6 +148,8 @@ namespace shzk
 		// Other Render Passes
 		m_passes[(size_t)PassType::PostProcess] = std::make_shared<PostProcessPass>();
 		m_passes[(size_t)PassType::PostProcess]->Init();
+		m_passes[(size_t)PassType::IBL] = std::make_shared<IBLPass>();
+		m_passes[(size_t)PassType::IBL]->Init();
 		
 	}
 }

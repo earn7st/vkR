@@ -30,6 +30,7 @@ add_library(
     "runtime/framework/components/MeshComponent.cpp"
     "runtime/framework/components/CameraComponent.cpp"
     "runtime/framework/components/SkyBoxComponent.cpp"
+    "runtime/framework/components/SkyLightComponent.cpp"
     "runtime/framework/components/DirectionalLightComponent.cpp"
     "runtime/framework/Node.cpp"
     "runtime/framework/Scene.cpp"
@@ -51,6 +52,7 @@ add_library(
     "runtime/render/passes/DepthPrePass.cpp"
     "runtime/render/passes/SkyPass.cpp"
     "runtime/render/passes/PostProcessPass.cpp"
+    "runtime/render/passes/IBLPass.cpp"
     
     # rhi
     "runtime/rhi/RHI.cpp"
@@ -70,7 +72,6 @@ add_library(
 
     # window
     "runtime/window/WindowSystem.cpp"
-
 )
 
 target_compile_definitions(shzk_runtime PUBLIC 
