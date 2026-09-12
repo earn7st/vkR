@@ -99,7 +99,6 @@ namespace shzk
 		m_renderState.depthStencilState.bEnableDepthTest = true;
 		m_renderState.depthStencilState.bEnableDepthWrite = false;
 		m_renderState.depthStencilState.depthTest = CompareFunction::GreaterEqual;
-
 	}
 
 	void SkyPassProcessor::AddMeshBatch(const MeshBatch& batch)

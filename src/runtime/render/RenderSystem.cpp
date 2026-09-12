@@ -56,6 +56,7 @@ namespace shzk
 		std::shared_ptr<RHITexture> currentSwapchainTexture = m_rhiSwapchain->AcquireNextTexture(nullptr, resource.startSemaphore);
 		
 		m_sceneRenderer->Process(Engine::Get()->GetActiveScene());
+
 		auto& cmd = RHICommandList::Get();
 		cmd->SetContext(resource.cmdContext.get());
 		cmd->BeginCommand();

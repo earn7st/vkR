@@ -8,6 +8,7 @@ namespace shzk
 {
 	class Node;
 	class CameraComponent;
+	class SkyLightComponent;
 
 	class Scene
 	{
@@ -23,6 +24,7 @@ namespace shzk
 		std::shared_ptr<Node> GetNodeById(uint32_t id) const;
 
 		std::shared_ptr<CameraComponent> GetActiveCamera();
+		std::shared_ptr<SkyLightComponent> GetActiveSkyLight();
 
 		void AddNode(std::shared_ptr<Node> node);
 

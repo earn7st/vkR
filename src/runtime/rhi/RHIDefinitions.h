@@ -75,8 +75,8 @@ namespace shzk
 		VertexBuffer,
 		IndexBuffer,
 		DepthStencilAttachment,
-		UnorderedAccess,		// not impl
-		ShaderResource,			// not impl
+		UnorderedAccess,
+		ShaderResource,
 		IndirectArgument,		// not impl
 		AccelerationStructure,	// not impl
 

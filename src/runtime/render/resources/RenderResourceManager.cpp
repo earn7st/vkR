@@ -68,7 +68,10 @@ namespace shzk
         // per frame root signature
         {
             RHIRootSignatureInfo perFrameInfo{};
-            perFrameInfo.AddEntry({ .set = DESCRIPTORSET_INDEX_PER_FRAME, .binding = PER_FRAME_BINDING_VIEW, .size = 1, .frequency = SHADER_FREQUENCY_ALL, .type = RESOURCE_TYPE_UNIFORM_BUFFER });
+            perFrameInfo.AddEntry({ .set = DESCRIPTORSET_INDEX_PER_FRAME, .binding = PER_FRAME_BINDING_VIEW, .size = 1, .frequency = SHADER_FREQUENCY_ALL, .type = RESOURCE_TYPE_UNIFORM_BUFFER })
+                .AddEntry({ .set = DESCRIPTORSET_INDEX_PER_FRAME, .binding = PER_FRAME_BINDING_IBL_IRRADIANCE, .size = 1, .frequency = SHADER_FREQUENCY_ALL, .type = RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER })
+                .AddEntry({ .set = DESCRIPTORSET_INDEX_PER_FRAME, .binding = PER_FRAME_BINDING_IBL_SPECULAR, .size = 1, .frequency = SHADER_FREQUENCY_ALL, .type = RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER })
+                .AddEntry({ .set = DESCRIPTORSET_INDEX_PER_FRAME, .binding = PER_FRAME_BINDING_IBL_BRDF_LUT, .size = 1, .frequency = SHADER_FREQUENCY_ALL, .type = RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER});
             m_perFrameRootSignature = RHI::Get()->CreateRootSignature(perFrameInfo);
         }
         
@@ -108,6 +111,31 @@ namespace shzk
 				info.bufferRange    = sizeof(PerFrameUniformShaderParameters);
                 perFrame.descriptorSet->UpdateDescriptor(info);
 
+                // IBL
+                RHIDescriptorUpdateInfo irr{};
+                irr.binding = PER_FRAME_BINDING_IBL_IRRADIANCE;
+                irr.index = 0;
+                irr.resourceType = RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
+                irr.sampler = m_samplers[1]->GetRHISampler();   // clamp ²ÉÑùÆ÷
+                irr.textureView = m_iblDiffuseView;
+                perFrame.descriptorSet->UpdateDescriptor(irr);
+
+                RHIDescriptorUpdateInfo spec{};
+                spec.binding = PER_FRAME_BINDING_IBL_SPECULAR;
+                spec.index = 0;
+                spec.resourceType = RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
+                spec.sampler = m_samplers[1]->GetRHISampler();
+                spec.textureView = m_iblSpecularView;
+                perFrame.descriptorSet->UpdateDescriptor(spec);
+
+                RHIDescriptorUpdateInfo lut{};
+                lut.binding = PER_FRAME_BINDING_IBL_BRDF_LUT;
+                lut.index = 0;
+                lut.resourceType = RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
+                lut.sampler = m_samplers[1]->GetRHISampler();
+                lut.textureView = m_brdfLUT->GetRHITextureView();
+                perFrame.descriptorSet->UpdateDescriptor(lut);
+
                 // HDR color attachment
                 RHITextureInfo hdrColorInfo{};
                 hdrColorInfo.format = HDR_COLOR_FORMAT;
@@ -123,7 +151,6 @@ namespace shzk
                 hdrViewInfo.format = HDR_COLOR_FORMAT;
                 hdrViewInfo.viewType = TextureViewType::View2D;
                 perFrame.hdrColorTextureView = RHI::Get()->CreateTextureView(hdrViewInfo);
-                
 
                 // color attachment
                 RHITextureInfo colorInfo{};
@@ -172,11 +199,9 @@ namespace shzk
 
             // IBL
             {
-                const uint32_t IRR_SIZE = 32, SPEC_SIZE = 128, SPEC_MIPS = 5;
-
                 RHITextureInfo irr{};
                 irr.format = FORMAT_R16G16B16A16_SFLOAT;
-                irr.extent = { IRR_SIZE, IRR_SIZE, 1 };
+                irr.extent = { IBL_IRR_SIZE, IBL_IRR_SIZE, 1 };
                 irr.arrayLayers = 6;
                 irr.mipLevels = 1;
                 irr.memoryUsage = MemoryUsage::GPUOnly;
@@ -191,9 +216,9 @@ namespace shzk
 
                 RHITextureInfo spec{};
                 spec.format = FORMAT_R16G16B16A16_SFLOAT;
-                spec.extent = { SPEC_SIZE, SPEC_SIZE, 1 };
+                spec.extent = { IBL_SPEC_SIZE, IBL_SPEC_SIZE, 1 };
                 spec.arrayLayers = 6;
-                spec.mipLevels = SPEC_MIPS;
+                spec.mipLevels = IBL_SPEC_MIPS;
                 spec.memoryUsage = MemoryUsage::GPUOnly;
                 spec.type = RESOURCE_TYPE_TEXTURE | RESOURCE_TYPE_TEXTURE_CUBE | RESOURCE_TYPE_RW_TEXTURE;
                 m_iblSpecular = RHI::Get()->CreateTexture(spec);
@@ -201,10 +226,10 @@ namespace shzk
                 RHITextureViewInfo specV{};
                 specV.texture = m_iblSpecular; specV.format = spec.format;
                 specV.viewType = TextureViewType::ViewCube;
-                specV.subresourceRange = { TEXTURE_ASPECT_COLOR, 0, SPEC_MIPS, 0, 6 };
+                specV.subresourceRange = { TEXTURE_ASPECT_COLOR, 0, IBL_SPEC_MIPS, 0, 6 };
                 m_iblSpecularView = RHI::Get()->CreateTextureView(specV);
             }
         }
-        
+
     }
 }

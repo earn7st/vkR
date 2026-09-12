@@ -4,6 +4,7 @@
 #include "runtime/framework/Node.h"
 #include "runtime/framework/components/CameraComponent.h"
 #include "runtime/framework/components/TransformComponent.h"
+#include "runtime/framework/components/SkyLightComponent.h"
 
 #include <cassert>
 
@@ -54,6 +55,16 @@ namespace shzk
 		{
 			std::shared_ptr<CameraComponent> cameraComp = node->TryGetComponent<CameraComponent>();
 			if (cameraComp && cameraComp->IsActiveCamera()) return cameraComp;
+		}
+		return nullptr;
+	}
+
+	std::shared_ptr<SkyLightComponent> Scene::GetActiveSkyLight()
+	{
+		for (auto& node : m_nodes)
+		{
+			std::shared_ptr<SkyLightComponent> skyLightComp = node->TryGetComponent<SkyLightComponent>();
+			if (skyLightComp && skyLightComp->GetEnvironmentMap()) return skyLightComp;
 		}
 		return nullptr;
 	}

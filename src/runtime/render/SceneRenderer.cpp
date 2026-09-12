@@ -6,6 +6,7 @@
 #include "runtime/render/MeshBatch.h"
 #include "runtime/render/RenderSystem.h"
 #include "runtime/render/passes/MeshPass.h"
+#include "runtime/render/passes/IBLPass.h"
 #include "runtime/render/passes/MeshPassProcessor.h"
 #include "runtime/render/resources/RenderResourceManager.h"
 #include "runtime/framework/Scene.h"
@@ -14,6 +15,7 @@
 #include "runtime/framework/components/TransformComponent.h"
 #include "runtime/framework/components/CameraComponent.h"
 #include "runtime/framework/components/SkyBoxComponent.h"
+#include "runtime/framework/components/SkyLightComponent.h"
 
 #include <glm/glm.hpp>
 #include <cassert>
@@ -24,6 +26,7 @@ namespace shzk
 	{
 		// Init Views
 		InitActiveCameraView(scene);
+		InitSkyLight(scene);
 
 		// CollectBatches
 		std::vector<MeshBatch>	batches;
@@ -61,6 +64,18 @@ namespace shzk
 		
 		std::shared_ptr<Buffer<PerFrameUniformShaderParameters>> buffer = RenderResourceManager::Get()->GetCurrentPerFrameUniformBuffer();
 		buffer->SetData(params);
+	}
+
+	void SceneRenderer::InitSkyLight(std::shared_ptr<Scene> scene)
+	{
+		auto skyLight = scene->GetActiveSkyLight();
+		if (!skyLight || !skyLight->GetEnvironmentMap()) return;
+
+		auto iblPass = Engine::GetRenderSystem()->GetPass<IBLPass>(PassType::IBL);
+		if (skyLight->GetEnvironmentMap() != iblPass->GetEnvMap())
+		{
+			iblPass->SetEnvMap(skyLight->GetEnvironmentMap());
+		}	
 	}
 
 	void SceneRenderer::CollectNodeMesh(const std::shared_ptr<Node>& node, std::vector<MeshBatch>& batches, glm::mat4x4 accTransformMat)

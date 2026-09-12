@@ -18,6 +18,7 @@ namespace shzk
 	private:
 		void InitActiveCameraView(std::shared_ptr<Scene> scene);
 		// void InitViews();
+		void InitSkyLight(std::shared_ptr<Scene> scene);
 		void CollectNodeMesh(const std::shared_ptr<Node>& node, std::vector<MeshBatch>& batches, glm::mat4x4 accTransformMat);
 	};
 }

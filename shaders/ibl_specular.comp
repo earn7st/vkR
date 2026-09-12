@@ -1,5 +1,96 @@
 #version 460
+#define PI 3.14159265359
+
+layout(set = 0, binding = 0) uniform sampler2D envMap;               // equirectangular HDR
+layout(set = 0, binding = 1, rgba16f) uniform imageCube OUT_COLOR;   // prefiltered cubemap, one mip per dispatch
+
+layout(push_constant) uniform IBLSetting {
+    vec4  front;
+    vec4  up;
+    float deltaPhi;
+    float deltaTheta;
+    float roughness;
+    uint  mipSize;
+} SETTING;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+const uint SAMPLE_COUNT = 1024u;
+
+vec2 DirToEquirectUV(vec3 d)
+{
+    float phi = atan(d.z, d.x), theta = acos(clamp(d.y, -1.0, 1.0));
+    return vec2(phi * (0.5 / PI) + 0.5, theta / PI);
+}
+
+// face 0..5 -> +X, -X, +Y, -Y, +Z, -Z st  [-1,1]
+vec3 CubeDir(int face, vec2 st)
+{
+    switch (face) {
+        case 0:  return normalize(vec3( 1.0, -st.y, -st.x)); // +X
+        case 1:  return normalize(vec3(-1.0, -st.y,  st.x)); // -X
+        case 2:  return normalize(vec3( st.x,  1.0,  st.y)); // +Y
+        case 3:  return normalize(vec3( st.x, -1.0, -st.y)); // -Y
+        case 4:  return normalize(vec3( st.x, -st.y,  1.0)); // +Z
+        default: return normalize(vec3(-st.x, -st.y, -1.0)); // -Z
+    }
+}
+
+float RadicalInverseVdC(uint bits)
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10;
+}
+
+vec2 Hammersley(uint i, uint N)
+{
+    return vec2(float(i) / float(N), RadicalInverseVdC(i));
+}
+
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
+{
+    float a = roughness * roughness;
+    float phi = 2.0 * PI * Xi.x;
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+
+    vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent   = normalize(cross(up, N));
+    vec3 bitangent = cross(N, tangent);
+
+    return normalize(tangent * H.x + bitangent * H.y + N * H.z);
+}
 
 void main()
 {
+    ivec3 id = ivec3(gl_GlobalInvocationID.xyz);   // xy: texel, z: face
+    if (id.x >= int(SETTING.mipSize) || id.y >= int(SETTING.mipSize)) return;
+
+    vec2 st = (vec2(id.xy) + 0.5) / float(SETTING.mipSize) * 2.0 - 1.0;
+    vec3 N  = CubeDir(int(id.z), st);
+    vec3 V  = N;   // prefilter V == R == N
+
+    vec3  color = vec3(0.0);
+    float totalWeight = 0.0;
+
+    for (uint i = 0u; i < SAMPLE_COUNT; ++i) {
+        vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+        vec3 H  = ImportanceSampleGGX(Xi, N, SETTING.roughness);
+        vec3 L  = normalize(2.0 * dot(V, H) * H - V);
+
+        float NdotL = max(dot(N, L), 0.0);
+        if (NdotL > 0.0) {
+            color += textureLod(envMap, DirToEquirectUV(L), 0.0).rgb * NdotL;
+            totalWeight += NdotL;
+        }
+    }
+
+    color = totalWeight > 0.0 ? color / totalWeight : vec3(0.0);
+    imageStore(OUT_COLOR, id, vec4(color, 1.0));
 }

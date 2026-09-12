@@ -39,6 +39,14 @@ namespace shzk
 		inline std::array<std::shared_ptr<RenderPass>, (size_t)PassType::Max>& GetPasses() { return m_passes; };
 		inline std::array<std::shared_ptr<MeshPass>, (size_t)MeshPassType::Max>& GetMeshPasses() { return m_meshPasses; }
 
+		template<typename ConcretePass>
+		std::shared_ptr<ConcretePass> GetPass(PassType pt) const 
+		{ 
+			if (m_passes[(size_t)pt])
+				return std::static_pointer_cast<ConcretePass>(m_passes[(size_t)pt]);
+			return nullptr;
+		}
+
 	private:
 		void InitRHIFundamentals();
 		void InitPerFrameRHIResources();

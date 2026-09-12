@@ -46,7 +46,6 @@ vec3 FilmicToneMap(vec3 x)
     return Uncharted2ToneMap(x) * whiteScale;
 }
 
-// 线性 sRGB -> AgX 空间
 vec3 agxBase(vec3 x)
 {
     const mat3 agxMat = mat3(
@@ -56,13 +55,12 @@ vec3 agxBase(vec3 x)
     );
     const float minEv = -12.47393;
     const float maxEv = 4.026069;
-    vec3 y = max(agxMat * x, 1e-10);   // 避免 log(0)
+    vec3 y = max(agxMat * x, 1e-10);
     y = log2(y);
-    y = (y - minEv) / (maxEv - minEv); // 归一化到 [0,1]
+    y = (y - minEv) / (maxEv - minEv);
     return y;
 }
 
-// AgX 的 "Default" look（对比度曲线）
 vec3 agxLook(vec3 x)
 {
     vec3 x2 = x * x;
@@ -76,7 +74,6 @@ vec3 agxLook(vec3 x)
             - 0.00232;
 }
 
-// AgX -> 显示线性（EOTF）
 vec3 agxEotf(vec3 x)
 {
     const mat3 agxMatInv = mat3(

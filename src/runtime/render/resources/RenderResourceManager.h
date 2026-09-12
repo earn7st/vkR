@@ -37,7 +37,7 @@ namespace shzk
 
 		inline std::shared_ptr<RHIRootSignature> GetPerFrameRootSignature() const { return m_perFrameRootSignature; }
 		inline std::shared_ptr<RHIRootSignature> GetMaterialRootSignature() const { return m_materialRootSignature; }
-		inline std::shared_ptr<RHIDescriptorSet> CreateMaterialDescriptorSet();
+		std::shared_ptr<RHIDescriptorSet> CreateMaterialDescriptorSet();
 
 		// per frame resources
 		inline std::shared_ptr<RHIDescriptorSet> GetCurrentPerFrameDescriptorSet() const { return m_perFrameResources[m_frameIndex].descriptorSet; }
@@ -104,6 +104,7 @@ namespace shzk
 		std::shared_ptr<RHITextureView> m_iblDiffuseView;
 		std::shared_ptr<RHITexture> m_iblSpecular;
 		std::shared_ptr<RHITextureView> m_iblSpecularView;
+
 
 		// render extent
 		Extent2D m_renderExtent{1280, 720};

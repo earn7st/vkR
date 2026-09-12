@@ -1,47 +1,64 @@
- #version 460
-  #define PI 3.14159265359
+#version 460
+#define PI 3.14159265359
 
-  layout(set = 0, binding = 0) uniform sampler2D envMap;            // equirectangular HDR
-  layout(set = 0, binding = 1, rgba16f) uniform image2D OUT_COLOR;
+layout(set = 0, binding = 0) uniform sampler2D envMap;               // equirectangular HDR
+layout(set = 0, binding = 1, rgba16f) uniform imageCube OUT_COLOR;   // irradiance cubemap (ViewCube)
 
-  layout(push_constant) uniform IBLSetting {
-      vec4 front; 
-      vec4 up;
-      float deltaPhi; 
-      float deltaTheta;
-      float roughness; 
-      uint numSamples; 
-      uint mip;
-  } SETTING;
+layout(push_constant) uniform IBLSetting {
+    vec4  front;
+    vec4  up;
+    float deltaPhi;
+    float deltaTheta;
+    float roughness;
+    uint  mipSize;
+} SETTING;
 
-  layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-  vec2 DirToEquirectUV(vec3 d) 
-  {
-      float phi = atan(d.z, d.x), theta = acos(clamp(d.y, -1.0, 1.0));
-      return vec2(phi * (0.5 / PI) + 0.5, theta / PI);
-  }
+const float IRR_SIZE = 32.0;
 
-  void main() 
-  {
-      ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-      vec2 uv     = (vec2(pixel) + 0.5) / 32.0;    // DIFFUSE_IBL_SIZE
-      vec2 dir2d  = uv * 2.0 - 1.0;
+vec2 DirToEquirectUV(vec3 d)
+{
+    float phi = atan(d.z, d.x), theta = acos(clamp(d.y, -1.0, 1.0));
+    return vec2(phi * (0.5 / PI) + 0.5, theta / PI);
+}
 
-      vec3 right = cross(SETTING.front.xyz, SETTING.up.xyz);
-      vec3 N = normalize(SETTING.front.xyz + dir2d.x * normalize(right) + dir2d.y * normalize(SETTING.up.xyz));
+// face 0..5 -> +X, -X, +Y, -Y, +Z, -Z; st [-1,1]
+vec3 CubeDir(int face, vec2 st)
+{
+    switch (face) {
+        case 0:  return normalize(vec3( 1.0, -st.y, -st.x)); // +X
+        case 1:  return normalize(vec3(-1.0, -st.y,  st.x)); // -X
+        case 2:  return normalize(vec3( st.x,  1.0,  st.y)); // +Y
+        case 3:  return normalize(vec3( st.x, -1.0, -st.y)); // -Y
+        case 4:  return normalize(vec3( st.x, -st.y,  1.0)); // +Z
+        default: return normalize(vec3(-st.x, -st.y, -1.0)); // -Z
+    }
+}
 
-      vec3 up = vec3(0.0, 1.0, 0.0);
-      right   = normalize(cross(up, N));
-      up      = cross(N, right);
+void main()
+{
+    ivec3 id = ivec3(gl_GlobalInvocationID.xyz);   // xy: texel, z: face
+    if (id.x >= int(IRR_SIZE) || id.y >= int(IRR_SIZE)) return;
 
-      vec3 color = vec3(0.0); uint cnt = 0u;
-      for (float phi = 0.0; phi < PI * 2.0; phi += SETTING.deltaPhi)
-      for (float theta = 0.0; theta < PI * 0.5; theta += SETTING.deltaTheta) {
-          vec3 tmp  = cos(phi) * right + sin(phi) * up;
-          vec3 svec = cos(theta) * N + sin(theta) * tmp;
-          color += textureLod(envMap, DirToEquirectUV(svec), 0.0).rgb * cos(theta) * sin(theta);
-          cnt++;
-      }
-      imageStore(OUT_COLOR, pixel, vec4(PI * color / float(cnt), 1.0));
-  }
+    vec2 uv = (vec2(id.xy) + 0.5) / IRR_SIZE;
+    vec2 st = uv * 2.0 - 1.0;
+
+    vec3 N = CubeDir(int(id.z), st);
+
+    vec3 ref   = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 right = normalize(cross(ref, N));
+    vec3 up    = cross(N, right);
+
+    vec3 color = vec3(0.0);
+    uint cnt   = 0u;
+    for (float phi = 0.0; phi < PI * 2.0; phi += SETTING.deltaPhi)
+    for (float theta = 0.0; theta < PI * 0.5; theta += SETTING.deltaTheta) {
+        vec3 tmp  = cos(phi) * right + sin(phi) * up;
+        vec3 svec = cos(theta) * N + sin(theta) * tmp;
+        color += textureLod(envMap, DirToEquirectUV(svec), 0.0).rgb * cos(theta) * sin(theta);
+        cnt++;
+    }
+
+    imageStore(OUT_COLOR, id, vec4(PI * color / float(cnt), 1.0));
+}
